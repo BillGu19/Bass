@@ -1,0 +1,58 @@
+import pandas as pd
+import numpy as np
+import finetune
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn import metrics
+
+#url = 'https://raw.githubusercontent.com/BillGu19/Bass/master/name_genre_identifiers.csv'
+url = "name_genre_identifiers_final.csv"
+name_genre = pd.read_csv(url, encoding='latin1', nrows = 100000)
+name = name_genre['primaryName'].astype(str)
+genre = name_genre['top_genre'].astype(str)
+X_train,X_test,y_train,y_test = train_test_split(name, genre, test_size=0.2, random_state=0)
+
+#print(genre)
+#print(name_genre)
+import finetune
+from finetune.base_models import BERT, BERTLarge, GPT2, GPT2Medium, GPT2Large, TextCNN, TCN, RoBERTa, DistilBERT
+from finetune import Classifier
+from finetune import LanguageModel
+
+model = Classifier(base_model=GPT2)
+model.fit(X_train, y_train)
+
+
+testX = ['Tom Cruise','Jamie Lee Curtis', 'Claire Danes', 'Geena Davis', 'Robert De Niro', 'John Denver', 'Johnny Depp', 'Leonardo DiCaprio', 'Clint Eastwood']
+y_pred= model.predict(X_test)
+X_test
+y_pred
+
+xt = pd.DataFrame(X_test.tolist(), columns=['Actor to Predict'])
+xt['Predicted Genre'] = y_pred
+xt
+
+xt.to_csv('genre_pred_g.csv')
+
+from datascience import *
+predictions = pd.read_csv('genre_pred_g.csv')
+
+data = Table().with_columns('Name', name_genre['primaryName'],'Genre', name_genre['top genre'])
+
+data
+
+preds = Table().with_columns('Name',predictions['Actor to Predict'], 'Genre Pred', predictions['Predicted Genre'])
+preds
+
+data_and_pred = data.join('Name', preds, 'Name')
+predicted_right = np.count_nonzero(data_and_pred.column('Genre') == data_and_pred.column('Genre Pred'))
+print("Predicted correctly:", predicted_right)
+print('Total predicted:', data_and_pred.num_rows)
+print('Accuracy:', predicted_right / data_and_pred.num_rows)
+data_and_pred.show()
+
+print('Number of actors used:', data.num_rows)
+
+#num_names = Table.read_table('names.tsv').num_rows
+#print('Total number of actors in dataset:', num_names)
